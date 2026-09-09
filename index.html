@@ -66,6 +66,13 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;font-size:12px;color:var(--ink-soft);align-items:center}
   .swatch{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 
+  .prevrow{margin:0 0 10px}
+  button.ghost{
+    width:100%;background:none;border:1px dashed var(--line);color:var(--ink-soft);
+    padding:9px;border-radius:3px;font-size:13px;
+  }
+  button.ghost:hover{border-color:var(--ink-soft);color:var(--ink)}
+
   /* months */
   .months{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
   .month{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 14px 12px;opacity:.72}
@@ -159,6 +166,8 @@
       <span><i class="swatch" style="background:var(--holiday-bg)"></i>Holiday</span>
     </div>
   </div>
+
+  <div class="prevrow"><button class="ghost" id="btnPrev"></button></div>
 
   <div class="months" id="months"></div>
 
@@ -282,7 +291,7 @@ function generateHolidays(y){
 
 const state = {
   settings:{
-    swMax:12, gps:false,
+    swMax:12, gps:false, showPrev:false,
     office:{lat:29.9930, lng:-95.5460, r:250},
     home:{lat:null, lng:null, r:1200}
   },
@@ -316,7 +325,7 @@ function holidayMap(){
 }
 function monthWindow(){
   const out = [];
-  for (let off = -1; off <= 3; off++){
+  for (let off = state.settings.showPrev ? -1 : 0; off <= 3; off++){
     const d = new Date(TODAY.getFullYear(), TODAY.getMonth()+off, 1);
     out.push({y:d.getFullYear(), m:d.getMonth()});
   }
@@ -449,8 +458,17 @@ function render(){
     wrap.appendChild(el);
   });
 
+  renderPrevToggle();
   renderHero();
   renderHolidays();
+}
+
+function renderPrevToggle(){
+  const d = new Date(TODAY.getFullYear(), TODAY.getMonth() - 1, 1);
+  const label = d.toLocaleDateString('en-US',{month:'short'}) + ' ' + d.getFullYear();
+  const b = document.getElementById('btnPrev');
+  b.textContent = state.settings.showPrev ? `收起上月 · ${label}` : `查看上月 · ${label}`;
+  b.setAttribute('aria-expanded', state.settings.showPrev ? 'true' : 'false');
 }
 
 function renderHero(){
@@ -534,6 +552,10 @@ document.getElementById('months').addEventListener('change', e => {
   save(); render();
 });
 
+document.getElementById('btnPrev').onclick = () => {
+  state.settings.showPrev = !state.settings.showPrev;
+  save(); render();
+};
 document.getElementById('btnOffice').onclick = () => markToday('office');
 document.getElementById('btnWfh').onclick    = () => markToday('wfh');
 document.getElementById('btnPto').onclick    = () => markToday('pto');
