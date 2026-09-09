@@ -1,0 +1,16 @@
+{
+  "name": "In-Office Tracker",
+  "short_name": "In-Office",
+  "description": "Tracks in-office, WFH and PTO days against the monthly Smart Working requirement.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EFF1EE",
+  "theme_color": "#EFF1EE",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

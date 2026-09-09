@@ -1,0 +1,700 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>In-Office Tracker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#EFF1EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="In-Office">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --paper:#EFF1EE;
+    --card:#FFFFFF;
+    --ink:#16211E;
+    --ink-soft:#5C6A66;
+    --line:#D3D9D5;
+    --office:#1F5C4C;
+    --office-bg:#DCEAE4;
+    --wfh:#9A6512;
+    --wfh-bg:#F3E6CE;
+    --pto:#43539B;
+    --pto-bg:#DFE3F4;
+    --holiday-bg:#E3E5E2;
+    --warn:#9B3B2E;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    padding:calc(20px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+            calc(60px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  /* hero */
+  .hero{
+    background:var(--card);border:1px solid var(--line);border-radius:4px;
+    padding:22px 24px;display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end;
+  }
+  .hero h1{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--ink-soft)}
+  .bignum{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-size:74px;line-height:.85;font-weight:400;letter-spacing:-.02em;
+  }
+  .bignum small{font-size:19px;margin-left:6px;color:var(--ink-soft)}
+  .hero-sub{color:var(--ink-soft);font-size:13px;margin-top:8px}
+  .strip{display:flex;gap:4px;flex-wrap:wrap;margin-top:12px}
+  .pip{width:16px;height:16px;border-radius:2px;border:1px solid var(--office)}
+  .pip.done{background:var(--office)}
+  .stats{display:flex;gap:22px;flex-wrap:wrap;margin-left:auto}
+  .stat b{display:block;font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+  .stat span{font-size:12px;color:var(--ink-soft)}
+
+  /* toolbar */
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:18px 0 10px}
+  button{
+    font:inherit;font-size:13px;padding:7px 13px;border:1px solid var(--line);
+    background:var(--card);color:var(--ink);border-radius:3px;cursor:pointer;
+  }
+  button:hover{border-color:var(--ink-soft)}
+  button:focus-visible{outline:2px solid var(--office);outline-offset:1px}
+  button.primary{background:var(--office);border-color:var(--office);color:#fff}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;font-size:12px;color:var(--ink-soft);align-items:center}
+  .swatch{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+  /* months */
+  .months{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+  .month{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 14px 12px;opacity:.72}
+  .month.current{opacity:1;border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .mhead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+  .mtitle{font-size:15px;font-weight:600}
+  .mtitle em{font-style:normal;color:var(--ink-soft);font-weight:400;font-size:12px;margin-left:6px}
+  .need{font-variant-numeric:tabular-nums;font-size:13px}
+  .need b{font-size:17px}
+  .need.ok{color:var(--office)}
+  .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px}
+  .dow div{text-align:center;font-size:10px;color:var(--ink-soft)}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cell{
+    aspect-ratio:1;border:1px solid var(--line);border-radius:2px;background:var(--card);
+    display:flex;align-items:center;justify-content:center;font-size:12px;
+    font-variant-numeric:tabular-nums;cursor:pointer;user-select:none;position:relative;
+  }
+  .cell.pad{border:0;background:none;cursor:default}
+  .cell.weekend{background:#F6F7F6;color:#B4BCB8;cursor:default}
+  .cell.holiday{background:var(--holiday-bg);color:var(--ink-soft);cursor:default}
+  .cell.holiday::after{content:"";position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--ink-soft)}
+  .cell.office{background:var(--office-bg);border-color:var(--office);color:var(--office);font-weight:600}
+  .cell.wfh{background:var(--wfh-bg);border-color:var(--wfh);color:var(--wfh);font-weight:600}
+  .cell.pto{background:var(--pto-bg);border-color:var(--pto);color:var(--pto);font-weight:600}
+  .cell.today{box-shadow:inset 0 0 0 2px var(--ink)}
+  .mfoot{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .mfoot b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .mfoot input{width:44px;font:inherit;font-size:12px;padding:2px 4px;border:1px solid var(--line);border-radius:2px;text-align:center}
+  .over{color:var(--warn);font-weight:600}
+
+  /* panels */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin:14px 0}
+  .panel h2{margin:0 0 12px;font-size:14px;font-weight:600}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+  label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:3px}
+  input[type=text],input[type=number],input[type=date]{
+    font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink)
+  }
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  td,th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}
+  th{font-size:11px;color:var(--ink-soft);font-weight:600}
+  td.x{width:28px;text-align:center}
+  td.x button{padding:1px 7px;border:0;background:none;color:var(--ink-soft);font-size:15px;line-height:1}
+  td.tag{font-size:11px;color:var(--ink-soft)}
+  .dowtag{color:var(--ink-soft);font-size:11px;margin-left:7px}
+  tr.off td:not(.x){text-decoration:line-through;color:#A7B0AC}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:8px}
+  .hidden{display:none}
+  #toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;
+    padding:9px 16px;border-radius:3px;font-size:13px;opacity:0;transition:opacity .18s;pointer-events:none
+  }
+  #toast.show{opacity:1}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (max-width:520px){
+    .bignum{font-size:58px}
+    .stats{margin-left:0;gap:16px}
+    .months{grid-template-columns:1fr}
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div>
+      <h1 id="heroLabel">本月还需去公司</h1>
+      <div class="bignum" id="heroNum">–<small>天</small></div>
+      <div class="hero-sub" id="heroSub"></div>
+      <div class="strip" id="heroStrip"></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sWd">–</b><span>Working days</span></div>
+      <div class="stat"><b id="sHol">–</b><span>Holidays</span></div>
+      <div class="stat"><b id="sPto">–</b><span>PTO</span></div>
+      <div class="stat"><b id="sWfh">–</b><span>WFH used / 12</span></div>
+      <div class="stat"><b id="sIn">–</b><span>In-office 已去</span></div>
+    </div>
+  </div>
+
+  <div class="bar">
+    <button class="primary" id="btnOffice">今天去了公司</button>
+    <button id="btnWfh">今天 WFH</button>
+    <button id="btnPto">今天休 PTO</button>
+    <button id="btnGps" class="hidden">📍 用定位打卡</button>
+    <button id="btnSettings">设置</button>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--office-bg);border:1px solid var(--office)"></i>In-office</span>
+      <span><i class="swatch" style="background:var(--wfh-bg);border:1px solid var(--wfh)"></i>WFH（默认）</span>
+      <span><i class="swatch" style="background:var(--pto-bg);border:1px solid var(--pto)"></i>PTO</span>
+      <span><i class="swatch" style="background:var(--holiday-bg)"></i>Holiday</span>
+    </div>
+  </div>
+
+  <div class="months" id="months"></div>
+
+  <div class="panel hidden" id="settings">
+    <h2>设置</h2>
+    <div class="row">
+      <div>
+        <label for="swMax">SW Max Days（每月 WFH 上限）</label>
+        <input type="number" id="swMax" min="0" max="31" style="width:70px">
+      </div>
+      <div>
+        <label for="gpsOn">定位打卡</label>
+        <button id="gpsToggle">关闭</button>
+      </div>
+      <div>
+        <button id="btnExport">导出 JSON</button>
+      </div>
+      <div>
+        <button id="btnImport">导入 JSON</button>
+        <input type="file" id="fileIn" accept=".json" class="hidden">
+      </div>
+    </div>
+
+    <div class="row" id="geoRow">
+      <div><label for="offLat">Office 纬度</label><input type="text" id="offLat" style="width:110px"></div>
+      <div><label for="offLng">Office 经度</label><input type="text" id="offLng" style="width:110px"></div>
+      <div><label for="offR">半径 m</label><input type="number" id="offR" style="width:70px"></div>
+      <div><button id="btnSetOffice">用当前位置设为 Office</button></div>
+    </div>
+    <div class="row">
+      <div><label for="homLat">Home 纬度</label><input type="text" id="homLat" style="width:110px"></div>
+      <div><label for="homLng">Home 经度</label><input type="text" id="homLng" style="width:110px"></div>
+      <div><label for="homR">半径 m</label><input type="number" id="homR" style="width:70px"></div>
+      <div><button id="btnSetHome">用当前位置设为 Home</button></div>
+    </div>
+    <p class="hint">定位打卡需要页面通过 https 打开。本地双击文件（file://）浏览器会拒绝授权定位，此时只能用上面的手动按钮。</p>
+
+    <h2 style="margin-top:22px">Holiday list</h2>
+    <table>
+      <thead><tr><th style="width:150px">日期</th><th>名称</th><th style="width:96px">来源</th><th class="x"></th></tr></thead>
+      <tbody id="holBody"></tbody>
+    </table>
+    <div class="row" style="margin-top:10px">
+      <div><label for="newHolDate">新增日期</label><input type="date" id="newHolDate"></div>
+      <div><label for="newHolName">名称</label><input type="text" id="newHolName" placeholder="Floating holiday"></div>
+      <div><button id="btnAddHol">添加</button></div>
+    </div>
+    <p class="hint">假期按规则逐年生成，不用每年手工录。标"待核对"的是 Good Friday（跟复活节浮动）和圣诞撞周末时的顺延，跟正式日历核对后可以删掉或改。删掉的自动假期会保留一个 ↺ 可以恢复。</p>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+const KEY = 'officecal:v1';
+
+/* ---------- holiday rules ----------
+   Every RINA NAM holiday is derivable from the year, so the calendar rolls
+   forward on its own. Two of them need checking against the official list:
+   Mardi Gras / Good Friday move with Easter, and the Christmas pair has to be
+   shifted by hand-set rule whenever Dec 24-25 touches a weekend.            */
+
+function addDays(dt, n){ const x = new Date(dt); x.setDate(x.getDate() + n); return x; }
+function observe(dt){                       // Sat -> Friday before, Sun -> Monday after
+  const w = dt.getDay();
+  if (w === 6) return addDays(dt, -1);
+  if (w === 0) return addDays(dt, 1);
+  return dt;
+}
+function nthWeekday(y, m, dow, n){          // n-th <dow> of month m
+  const dt = new Date(y, m, 1);
+  dt.setDate(1 + ((dow - dt.getDay() + 7) % 7) + (n - 1) * 7);
+  return dt;
+}
+function lastWeekday(y, m, dow){            // last <dow> of month m
+  const dt = new Date(y, m + 1, 0);
+  dt.setDate(dt.getDate() - ((dt.getDay() - dow + 7) % 7));
+  return dt;
+}
+function easter(y){                         // anonymous Gregorian algorithm
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100;
+  const d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mo = Math.floor((h + l - 7 * m + 114) / 31);
+  const da = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(y, mo - 1, da);
+}
+function christmasPair(y){
+  const w = new Date(y, 11, 25).getDay();
+  if (w >= 2 && w <= 5)                     // Dec 24 and 25 both fall Mon-Fri
+    return [{dt:new Date(y,11,24), name:'Christmas Eve'},
+            {dt:new Date(y,11,25), name:'Christmas Day'}];
+  if (w === 1)                              // Dec 24 is a Sunday
+    return [{dt:new Date(y,11,25), name:'Christmas Day', check:true},
+            {dt:new Date(y,11,26), name:'Day After Christmas', check:true}];
+  if (w === 6)                              // Dec 25 is a Saturday
+    return [{dt:new Date(y,11,23), name:'Christmas Eve (observed)', check:true},
+            {dt:new Date(y,11,24), name:'Christmas Day (observed)', check:true}];
+  return [{dt:new Date(y,11,23), name:'Christmas Eve (observed)', check:true},
+          {dt:new Date(y,11,26), name:'Christmas Day (observed)', check:true}];
+}
+function generateHolidays(y){
+  const E = easter(y);
+  const tg = nthWeekday(y, 10, 4, 4);
+  const list = [
+    {dt: observe(new Date(y,0,1)), name:"New Year's Day"},
+    {dt: addDays(E, -2),           name:'Good Friday', check:true},
+    {dt: lastWeekday(y, 4, 1),     name:'Memorial Day'},
+    {dt: observe(new Date(y,6,4)), name:'Independence Day'},
+    {dt: nthWeekday(y, 8, 1, 1),   name:'Labor Day'},
+    {dt: tg,                       name:'Thanksgiving Day'},
+    {dt: addDays(tg, 1),           name:'Day After Thanksgiving'},
+    ...christmasPair(y)
+  ];
+  return list.map(h => ({date: iso(h.dt), name: h.name, auto:true, check: !!h.check}));
+}
+
+const state = {
+  settings:{
+    swMax:12, gps:false,
+    office:{lat:29.9930, lng:-95.5460, r:250},
+    home:{lat:null, lng:null, r:1200}
+  },
+  days:{},        // '2026-09-08' -> 'office' | 'pto'
+  ptoOverride:{}, // '2026-09' -> number
+  holExclude:[],  // generated dates you removed
+  holCustom:[]    // dates you added yourself
+};
+
+/* ---------- helpers ---------- */
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const mkey = (y,m) => `${y}-${String(m+1).padStart(2,'0')}`;
+const TODAY = new Date();
+const TODAY_ISO = iso(TODAY);
+
+function holidayYears(){
+  const yrs = new Set();
+  monthWindow().forEach(({y}) => { yrs.add(y); yrs.add(y + 1); });
+  return [...yrs].sort();
+}
+function holidayList(){
+  const byDate = {};
+  holidayYears().forEach(y => generateHolidays(y).forEach(h => byDate[h.date] = h));
+  state.holCustom.forEach(h => byDate[h.date] = {date:h.date, name:h.name, auto:false, check:false});
+  return Object.values(byDate).sort((a,b) => a.date.localeCompare(b.date));
+}
+function holidayMap(){
+  const m = {};
+  holidayList().forEach(h => { if (!state.holExclude.includes(h.date)) m[h.date] = h; });
+  return m;
+}
+function monthWindow(){
+  const out = [];
+  for (let off = -1; off <= 3; off++){
+    const d = new Date(TODAY.getFullYear(), TODAY.getMonth()+off, 1);
+    out.push({y:d.getFullYear(), m:d.getMonth()});
+  }
+  return out;
+}
+function computeMonth(y, m){
+  const hm = holidayMap();
+  const last = new Date(y, m+1, 0).getDate();
+  let wd = 0, hol = 0, ptoMarked = 0, office = 0, wfh = 0;
+  for (let d = 1; d <= last; d++){
+    const dt = new Date(y, m, d);
+    const dow = dt.getDay();
+    const key = iso(dt);
+    const isWeekday = dow >= 1 && dow <= 5;
+    const isHol = !!hm[key];
+    if (isWeekday) wd++;
+    if (isWeekday && isHol) hol++;
+    if (!isWeekday || isHol) continue;
+    const st = state.days[key];
+    if (st === 'office') office++;
+    else if (st === 'pto') ptoMarked++;
+    else if (key <= TODAY_ISO) wfh++;   // anything else already elapsed counts as WFH
+  }
+  const ov = state.ptoOverride[mkey(y,m)];
+  const pto = (ov === undefined || ov === null) ? ptoMarked : ov;
+  if (pto > ptoMarked) wfh = Math.max(0, wfh - (pto - ptoMarked));
+  const required = Math.max(0, wd - state.settings.swMax - hol - pto);
+  return {wd, hol, pto, ptoMarked, override: ov !== undefined && ov !== null,
+          office, wfh, required, remaining: Math.max(0, required - office)};
+}
+
+/* ---------- storage ---------- */
+const DB_NAME = 'officecal', DB_STORE = 'kv';
+function openDB(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(DB_STORE);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function kv(mode, fn){
+  return openDB().then(db => new Promise((res, rej) => {
+    const req = fn(db.transaction(DB_STORE, mode).objectStore(DB_STORE));
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  }));
+}
+
+async function load(){
+  let raw = null;
+  try{ raw = await kv('readonly', st => st.get(KEY)); }catch(e){}
+  if (!raw){ try{ raw = localStorage.getItem(KEY); }catch(e){} }
+  if (!raw) return;
+  try{
+    const s = JSON.parse(raw);
+    if (s.settings) Object.assign(state.settings, s.settings);
+    if (s.days){
+      state.days = s.days;
+      for (const k in state.days) if (state.days[k] === 'wfh') delete state.days[k];
+    }
+    if (s.ptoOverride) state.ptoOverride = s.ptoOverride;
+    if (Array.isArray(s.holExclude)) state.holExclude = s.holExclude;
+    if (Array.isArray(s.holCustom))  state.holCustom  = s.holCustom;
+  }catch(e){ /* corrupt payload: start clean rather than block the app */ }
+}
+
+let saveTimer = null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const raw = JSON.stringify(state);
+    let ok = false;
+    try{ await kv('readwrite', st => st.put(raw, KEY)); ok = true; }catch(e){}
+    try{ localStorage.setItem(KEY, raw); ok = true; }catch(e){}   // mirror
+    if (!ok) toast('没能保存，改动只在本次会话有效');
+  }, 250);
+}
+
+/* ---------- render ---------- */
+function render(){
+  const hm = holidayMap();
+  const wrap = document.getElementById('months');
+  wrap.innerHTML = '';
+
+  monthWindow().forEach(({y,m}) => {
+    const isCur = (y === TODAY.getFullYear() && m === TODAY.getMonth());
+    const c = computeMonth(y,m);
+    const el = document.createElement('div');
+    el.className = 'month' + (isCur ? ' current' : '');
+
+    const name = new Date(y,m,1).toLocaleDateString('en-US',{month:'long'});
+    const need = c.remaining === 0
+      ? `<span class="need ok"><b>✓</b> 已达标</span>`
+      : `<span class="need">还需 <b>${c.remaining}</b> 天</span>`;
+
+    let cells = '';
+    const pad = new Date(y,m,1).getDay();     // Sunday-first grid
+    for (let i = 0; i < pad; i++) cells += '<div class="cell pad"></div>';
+    const last = new Date(y,m+1,0).getDate();
+    for (let d = 1; d <= last; d++){
+      const dt = new Date(y,m,d), key = iso(dt), dow = dt.getDay();
+      const weekend = dow === 0 || dow === 6;
+      const isHol = !!hm[key];
+      let cls = 'cell';
+      if (weekend) cls += ' weekend';
+      else if (isHol) cls += ' holiday';
+      else if (state.days[key]) cls += ' ' + state.days[key];
+      else if (key <= TODAY_ISO) cls += ' wfh';   // default for a past working day
+      if (key === TODAY_ISO) cls += ' today';
+      const title = isHol ? ` title="${hm[key].name.replace(/"/g,'')}"` : '';
+      const clickable = (!weekend && !isHol) ? ` data-d="${key}"` : '';
+      cells += `<div class="${cls}"${title}${clickable}>${d}</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="mhead">
+        <div class="mtitle">${name} <em>${y}</em></div>${need}
+      </div>
+      <div class="dow"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
+      <div class="grid">${cells}</div>
+      <div class="mfoot">
+        <span>工作日 <b>${c.wd}</b></span>
+        <span>假期 <b>${c.hol}</b></span>
+        <span>PTO <input type="number" min="0" max="31" value="${c.pto}" data-pto="${mkey(y,m)}"></span>
+        <span>需到岗 <b>${c.required}</b></span>
+        <span>已到岗 <b>${c.office}</b></span>
+        <span class="${c.wfh > state.settings.swMax ? 'over' : ''}">WFH <b>${c.wfh}</b>/${state.settings.swMax}</span>
+      </div>`;
+    wrap.appendChild(el);
+  });
+
+  renderHero();
+  renderHolidays();
+}
+
+function renderHero(){
+  const c = computeMonth(TODAY.getFullYear(), TODAY.getMonth());
+  document.getElementById('heroNum').innerHTML = c.remaining + '<small>天</small>';
+  document.getElementById('heroLabel').textContent =
+    c.remaining === 0 ? '本月已达标' : '本月还需去公司';
+  document.getElementById('heroSub').textContent =
+    `${c.wd} 工作日 − ${state.settings.swMax} SW − ${c.hol} 假期 − ${c.pto} PTO = ${c.required} 天需到岗`;
+  document.getElementById('sWd').textContent  = c.wd;
+  document.getElementById('sHol').textContent = c.hol;
+  document.getElementById('sPto').textContent = c.pto;
+  document.getElementById('sWfh').textContent = c.wfh;
+  document.getElementById('sWfh').className = c.wfh > state.settings.swMax ? 'over' : '';
+  document.getElementById('sIn').textContent  = c.office;
+
+  const strip = document.getElementById('heroStrip');
+  strip.innerHTML = '';
+  for (let i = 0; i < c.required; i++){
+    const p = document.createElement('div');
+    p.className = 'pip' + (i < c.office ? ' done' : '');
+    strip.appendChild(p);
+  }
+}
+
+function renderHolidays(){
+  const tb = document.getElementById('holBody');
+  tb.innerHTML = '';
+  holidayList().forEach(h => {
+    const off = state.holExclude.includes(h.date);
+    const dow = new Date(h.date + 'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
+    const tag = !h.auto ? '手动' : (h.check ? '自动 · 待核对' : '自动');
+    const act = off
+      ? `<button data-res="${h.date}" aria-label="恢复">↺</button>`
+      : `<button data-del="${h.date}|${h.auto ? 1 : 0}" aria-label="删除">×</button>`;
+    const tr = document.createElement('tr');
+    if (off) tr.className = 'off';
+    tr.innerHTML = `<td>${h.date}<span class="dowtag">${dow}</span></td><td>${h.name}</td>` +
+                   `<td class="tag">${tag}</td><td class="x">${act}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- interaction ---------- */
+const CYCLE = [undefined,'office','pto'];
+function cycle(key){
+  const cur = state.days[key];
+  const next = CYCLE[(CYCLE.indexOf(cur) + 1) % CYCLE.length];
+  if (next) state.days[key] = next; else delete state.days[key];
+  save(); render();
+}
+function setDay(key, st){
+  if (state.days[key] === st) delete state.days[key];
+  else state.days[key] = st;
+  save(); render();
+}
+function markToday(st){
+  const dow = TODAY.getDay();
+  if (dow === 0 || dow === 6) return toast('今天是周末，不计入');
+  if (holidayMap()[TODAY_ISO]) return toast('今天是公司假期，不计入');
+  if (st === 'wfh'){
+    delete state.days[TODAY_ISO];
+    save(); render();
+    return toast('记为 WFH');
+  }
+  setDay(TODAY_ISO, st);
+  toast(st === 'office' ? '记为 in-office' : '记为 PTO');
+}
+
+document.getElementById('months').addEventListener('click', e => {
+  const cell = e.target.closest('[data-d]');
+  if (cell) cycle(cell.dataset.d);
+});
+document.getElementById('months').addEventListener('change', e => {
+  const inp = e.target.closest('[data-pto]');
+  if (!inp) return;
+  const k = inp.dataset.pto, v = inp.value.trim();
+  const marked = computeMonth(+k.slice(0,4), +k.slice(5,7) - 1).ptoMarked;
+  if (v === '' || +v === marked) delete state.ptoOverride[k];
+  else state.ptoOverride[k] = Math.max(0, +v);
+  save(); render();
+});
+
+document.getElementById('btnOffice').onclick = () => markToday('office');
+document.getElementById('btnWfh').onclick    = () => markToday('wfh');
+document.getElementById('btnPto').onclick    = () => markToday('pto');
+document.getElementById('btnSettings').onclick = () => {
+  const p = document.getElementById('settings');
+  p.classList.toggle('hidden');
+  if (!p.classList.contains('hidden')) p.scrollIntoView({behavior:'smooth', block:'start'});
+};
+
+/* settings fields */
+function bindNum(id, get, set){
+  const el = document.getElementById(id);
+  const v = get();
+  el.value = (v === null || v === undefined) ? '' : v;
+  el.onchange = () => { set(el.value); save(); render(); };
+}
+bindNum('swMax', () => state.settings.swMax, v => state.settings.swMax = Math.max(0, +v || 0));
+[['offLat','office','lat'],['offLng','office','lng'],['offR','office','r'],
+ ['homLat','home','lat'],['homLng','home','lng'],['homR','home','r']].forEach(([id,g,f]) => {
+  bindNum(id, () => state.settings[g][f], v => {
+    const n = parseFloat(v);
+    state.settings[g][f] = Number.isFinite(n) ? n : (f === 'r' ? 0 : null);
+  });
+});
+
+const gpsBtn = document.getElementById('gpsToggle');
+function syncGps(){
+  gpsBtn.textContent = state.settings.gps ? '已开启' : '关闭';
+  document.getElementById('btnGps').classList.toggle('hidden', !state.settings.gps);
+}
+gpsBtn.onclick = () => { state.settings.gps = !state.settings.gps; syncGps(); save(); };
+
+function here(){
+  return new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej(new Error('浏览器不支持定位'));
+    navigator.geolocation.getCurrentPosition(
+      p => res(p.coords),
+      () => rej(new Error('拿不到定位。页面需要用 https 打开并授权')),
+      {enableHighAccuracy:true, timeout:10000}
+    );
+  });
+}
+function metres(a, b){
+  const R = 6371000, r = x => x * Math.PI / 180;
+  const dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+  const h = Math.sin(dLat/2)**2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+document.getElementById('btnGps').onclick = async () => {
+  try{
+    const c = await here();
+    const p = {lat:c.latitude, lng:c.longitude};
+    const off = state.settings.office, hom = state.settings.home;
+    const dOff = (off.lat === null) ? Infinity : metres(p, off);
+    const dHom = (hom.lat === null) ? Infinity : metres(p, hom);
+    if (dOff <= off.r) return markToday('office');
+    if (dHom <= hom.r) return markToday('wfh');
+    if (off.lat === null) return toast('还没设置 Office 坐标，先在设置里点“用当前位置设为 Office”');
+    toast(`离 Office ${Math.round(dOff)}m` +
+          (hom.lat === null ? '，Home 未设置' : `、离 Home ${Math.round(dHom)}m`) + '，都不在范围内');
+  }catch(e){ toast(e.message); }
+};
+async function setPoint(which){
+  try{
+    const c = await here();
+    state.settings[which].lat = +c.latitude.toFixed(5);
+    state.settings[which].lng = +c.longitude.toFixed(5);
+    document.getElementById(which === 'office' ? 'offLat' : 'homLat').value = state.settings[which].lat;
+    document.getElementById(which === 'office' ? 'offLng' : 'homLng').value = state.settings[which].lng;
+    save(); toast('坐标已更新');
+  }catch(e){ toast(e.message); }
+}
+document.getElementById('btnSetOffice').onclick = () => setPoint('office');
+document.getElementById('btnSetHome').onclick   = () => setPoint('home');
+
+/* holidays */
+document.getElementById('btnAddHol').onclick = () => {
+  const d = document.getElementById('newHolDate').value;
+  const n = document.getElementById('newHolName').value.trim();
+  if (!d) return toast('先选一个日期');
+  state.holCustom = state.holCustom.filter(h => h.date !== d);
+  state.holCustom.push({date:d, name:n || 'Holiday'});
+  state.holExclude = state.holExclude.filter(x => x !== d);
+  document.getElementById('newHolDate').value = '';
+  document.getElementById('newHolName').value = '';
+  save(); render();
+};
+document.getElementById('holBody').addEventListener('click', e => {
+  const del = e.target.closest('[data-del]');
+  const res = e.target.closest('[data-res]');
+  if (del){
+    const [date, auto] = del.dataset.del.split('|');
+    if (auto === '1'){
+      if (!state.holExclude.includes(date)) state.holExclude.push(date);
+    } else {
+      state.holCustom = state.holCustom.filter(h => h.date !== date);
+    }
+    save(); render();
+  } else if (res){
+    state.holExclude = state.holExclude.filter(x => x !== res.dataset.res);
+    save(); render();
+  }
+});
+
+/* export / import */
+document.getElementById('btnExport').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `in-office-tracker-${TODAY_ISO}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+document.getElementById('btnImport').onclick = () => document.getElementById('fileIn').click();
+document.getElementById('fileIn').onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try{
+    const s = JSON.parse(await f.text());
+    if (s.settings) Object.assign(state.settings, s.settings);
+    state.days = s.days || {};
+    state.ptoOverride = s.ptoOverride || {};
+    state.holExclude = Array.isArray(s.holExclude) ? s.holExclude : [];
+    state.holCustom  = Array.isArray(s.holCustom)  ? s.holCustom  : [];
+    save(); syncGps(); render();
+    toast('已导入');
+  }catch(err){ toast('这个文件读不了，需要本工具导出的 JSON'); }
+  e.target.value = '';
+};
+
+let tt = null;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function setToday(st){                    // idempotent: re-firing changes nothing
+  const dow = TODAY.getDay();
+  if (dow === 0 || dow === 6) return toast('今天是周末，不计入');
+  if (holidayMap()[TODAY_ISO]) return toast('今天是公司假期，不计入');
+  if (st === 'wfh') delete state.days[TODAY_ISO];
+  else state.days[TODAY_ISO] = st;
+  save(); render();
+  toast(st === 'office' ? '记为 in-office' : st === 'pto' ? '记为 PTO' : '记为 WFH');
+}
+function applyUrlMark(){
+  const m = new URLSearchParams(location.search).get('mark');
+  if (!m) return;
+  if (['office','pto','wfh'].includes(m)) setToday(m);
+  history.replaceState(null, '', location.pathname);   // don't re-fire on reopen
+}
+
+(async function init(){
+  await load();
+  document.getElementById('swMax').value = state.settings.swMax;
+  syncGps();
+  render();
+  applyUrlMark();
+  if ('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
